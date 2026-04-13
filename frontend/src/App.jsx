@@ -74,7 +74,7 @@ export default function App() {
 
       const data = await res.json();
       setResult(data);
-      setRefreshKey((k) => k + 1); // refresh sidebar
+      setRefreshKey((k) => k + 1);
     } catch (err) {
       setApiError(err.message);
     } finally {
@@ -106,14 +106,14 @@ export default function App() {
   };
 
   return (
-    <div className="app-layout">
-      <Sidebar
-        onSelect={handleHistorySelect}
-        activeId={activeHistoryId}
-        refreshKey={refreshKey}
-      />
-      <div className="app">
-        <Header />
+    <div className="app">
+      <Header />
+      <div className="body-layout">
+        <Sidebar
+          onSelect={handleHistorySelect}
+          activeId={activeHistoryId}
+          refreshKey={refreshKey}
+        />
         <main className="main-content">
           <div className="main-toolbar">
             <button className="btn-new" onClick={handleNewPrompt}>
