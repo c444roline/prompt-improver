@@ -1,4 +1,4 @@
-const OpenAI = require("openai");
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const SYSTEM_PROMPT = `You are a prompt-engineering expert. The user will give you structured information about a task they want an AI chatbot to perform. Your job is to produce three things:
 
@@ -36,29 +36,38 @@ function getMockResponse(input) {
         ? "Embeds the source material directly, preventing the AI from hallucinating outside the provided content."
         : "Provides sufficient context so the AI can respond accurately without guessing.",
     ],
-    sample_output: `Here is a sample response for "${input.task}":\n\n• This is a demonstration of what the AI would produce using the improved prompt.\n• The output follows the requested format: ${input.output_format}.\n• It respects the specified length: ${input.length}.\n• Constraints are honored throughout the response.\n\n(This is mock data — connect an OpenAI API key for real LLM output.)`,
+    sample_output: `Here is a sample response for "${input.task}":\n\n\u2022 This is a demonstration of what the AI would produce using the improved prompt.\n\u2022 The output follows the requested format: ${input.output_format}.\n\u2022 It respects the specified length: ${input.length}.\n\u2022 Constraints are honored throughout the response.\n\n(This is mock data \u2014 connect a Gemini API key for real LLM output.)`,
   };
 }
 
 async function generate(input) {
-  if (!process.env.OPENAI_API_KEY) {
-    console.log("[LLM] No API key found — returning mock response");
+  if (!process.env.GEMINI_API_KEY) {
+    console.log("[LLM] No Gemini API key found \u2014 returning mock response");
     return getMockResponse(input);
   }
 
-  const client = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+  const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+  const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
 
-  const response = await client.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [
-      { role: "system", content: SYSTEM_PROMPT },
-      { role: "user", content: buildUserMessage(input) },
+  const result = await model.generateContent({
+    contents: [
+      {
+        role: "user",
+        parts: [{ text: SYSTEM_PROMPT + "\n\n" + buildUserMessage(input) }],
+      },
     ],
-    temperature: 0.7,
-    max_tokens: 2000,
+    generationConfig: {
+      temperature: 0.7,
+      maxOutputTokens: 2000,
+    },
   });
 
-  const text = response.choices[0].message.content.trim();
+  let text = result.response.text().trim();
+
+  // Strip markdown code fences if present
+  if (text.startsWith("```")) {
+    text = text.replace(/^```(?:json)?\s*\n?/, "").replace(/\n?```\s*$/, "");
+  }
 
   try {
     const parsed = JSON.parse(text);
